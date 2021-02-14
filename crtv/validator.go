@@ -8,20 +8,18 @@ import (
 )
 
 // ValidateExpiry checks if a certificate is expired or not
-func ValidateExpiry(pkcs12Bytes []byte, password string) error {
+func ValidateExpiry(pkcs12Bytes []byte, password string, stabDate time.Time) error {
 
 	from, to, err := ValidBetween(pkcs12Bytes, password)
 	if err != nil {
 		return err
 	}
 
-	now := time.Now()
-
-	if now.After(to) {
+	if stabDate.After(to) {
 		return fmt.Errorf("certificate expired at %s", to.Format(time.RFC3339))
 	}
 
-	if now.Before(from) {
+	if stabDate.Before(from) {
 		return fmt.Errorf("certificate not valid yet, valid after %s", from.Format(time.RFC3339))
 	}
 

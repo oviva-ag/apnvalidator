@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
@@ -25,7 +26,16 @@ func main() {
 	flag.BoolVar(&revocationList, "validate-revocation-list", false, "validate if the certificate is in its revocation list")
 	flag.BoolVar(&validate, "validate", false, "validates the certificate with all supported variants")
 
+	var expiresInDays int
+	flag.IntVar(&expiresInDays, "expires-in-days", 0, "fail the expiry if it expires in less than <n> days")
+
 	flag.Parse()
+
+	if !(validate || expiry || handshake || revocationList) {
+		log.Println("no validation provided")
+		flag.Usage()
+		os.Exit(1)
+	}
 
 	if validate {
 		expiry = true
@@ -39,7 +49,8 @@ func main() {
 	}
 
 	if expiry {
-		mustNotBeExpired(data, password)
+		stabDate := time.Now().AddDate(0, 0, expiresInDays)
+		mustNotBeExpired(data, password, stabDate)
 	}
 	if handshake {
 		mustSucceedTlsHanshake(data, password)
@@ -49,9 +60,9 @@ func main() {
 	}
 }
 
-func mustNotBeExpired(pkcs12Bytes []byte, password string) {
+func mustNotBeExpired(pkcs12Bytes []byte, password string, stabDate time.Time) {
 	log.Println("validating expiry dates")
-	err := crtv.ValidateExpiry(pkcs12Bytes, password)
+	err := crtv.ValidateExpiry(pkcs12Bytes, password, stabDate)
 	if err != nil {
 		log.Fatal(err)
 	}
